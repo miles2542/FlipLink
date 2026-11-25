@@ -208,4 +208,65 @@ internal object FlipLinkIcons {
             }
         }.build()
     }
+
+    val Copy: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "Copy",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.9f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(9f, 9f)
+                horizontalLineTo(19f)
+                arcTo(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = true, 21f, 11f)
+                verticalLineTo(19f)
+                arcTo(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = true, 19f, 21f)
+                horizontalLineTo(11f)
+                arcTo(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = true, 9f, 19f)
+                verticalLineTo(9f)
+                close()
+                moveTo(5f, 15f)
+                horizontalLineTo(4f)
+                arcTo(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = true, 2f, 13f)
+                verticalLineTo(5f)
+                arcTo(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = true, 4f, 3f)
+                horizontalLineTo(13f)
+                arcTo(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = true, 15f, 5f)
+                verticalLineTo(6f)
+            }
+        }.build()
+    }
+
+    val Info: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "Info",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.9f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(12f, 3f)
+                arcTo(9f, 9f, 0f, isMoreThanHalf = true, isPositiveArc = false, 12f, 21f)
+                arcTo(9f, 9f, 0f, isMoreThanHalf = true, isPositiveArc = false, 12f, 3f)
+                close()
+                moveTo(12f, 16f)
+                verticalLineTo(12f)
+                moveTo(12f, 8f)
+                horizontalLineTo(12.01f)
+            }
+        }.build()
+    }
 }

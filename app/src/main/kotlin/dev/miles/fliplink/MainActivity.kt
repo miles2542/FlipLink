@@ -40,12 +40,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import dev.miles.fliplink.data.shizuku.ShizukuState
+import dev.miles.fliplink.ui.appdetail.AppDetailScreen
+import dev.miles.fliplink.ui.appdetail.AppDetailViewModel
 import dev.miles.fliplink.ui.applist.AppListScreen
 import dev.miles.fliplink.ui.applist.AppListViewModel
-import dev.miles.fliplink.ui.components.FlipLinkIcons
 import dev.miles.fliplink.ui.sheets.SettingsSheet
 import dev.miles.fliplink.ui.sheets.ShizukuStatusSheet
-import dev.miles.fliplink.ui.theme.FlipLinkSpacing
 import dev.miles.fliplink.ui.theme.FlipLinkTheme
 import kotlinx.serialization.Serializable
 
@@ -152,9 +152,37 @@ private fun FlipLinkNavHost(container: AppContainer) {
             }
             composable<FlipLinkRoute.AppDetail> { backStackEntry ->
                 val route = backStackEntry.toRoute<FlipLinkRoute.AppDetail>()
-                ScaffoldDetailPlaceholderScreen(
-                    packageName = route.packageName,
+                val detailViewModel = remember(container, route.packageName) {
+                    AppDetailViewModel(
+                        packageName = route.packageName,
+                        repositoryState = container.repository.state,
+                        onSetLinkHandlingAllowed = container.repository::setLinkHandlingAllowed,
+                        onSetDomainEnabled = container.repository::setDomainEnabled,
+                        onSetAllDomainsEnabled = container.repository::setAllDomainsEnabled,
+                        onTakeOverDomain = container.repository::takeOverDomain,
+                        onUndoTakeover = container.repository::undoTakeover,
+                    )
+                }
+                DisposableEffect(detailViewModel) {
+                    onDispose { detailViewModel.clear() }
+                }
+                val detailUiState by detailViewModel.uiState.collectAsState()
+                AppDetailScreen(
+                    uiState = detailUiState,
+                    events = detailViewModel.events,
+                    iconCache = container.appIconCache,
                     onBack = { navController.popBackStack() },
+                    onToggleMaster = detailViewModel::onToggleMaster,
+                    onToggleDomain = detailViewModel::onToggleDomain,
+                    onEnableAll = detailViewModel::onEnableAll,
+                    onDisableAll = detailViewModel::onDisableAll,
+                    onTakeOver = detailViewModel::onTakeOver,
+                    onUndoTakeover = detailViewModel::onUndoTakeoverClicked,
+                    onOpenMasterAdb = { detailViewModel.openMasterAdbSheet() },
+                    onOpenAllAdb = detailViewModel::openAllAdbSheet,
+                    onOpenCustomAdb = detailViewModel::openCustomAdbSheet,
+                    onDismissAdbSheet = detailViewModel::dismissAdbSheet,
+                    onCommandCopied = detailViewModel::onCommandCopied,
                 )
             }
         }
@@ -179,64 +207,5 @@ private fun FlipLinkNavHost(container: AppContainer) {
             onShowSystemAppsChange = container.preferencesStore::setShowSystemApps,
             onDismiss = { showSettingsSheet = false },
         )
-    }
-}
-
-@Composable
-private fun ScaffoldDetailPlaceholderScreen(
-    packageName: String,
-    onBack: () -> Unit,
-) {
-    val colors = FlipLinkTheme.colors
-    val typography = FlipLinkTheme.typography
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(FlipLinkSpacing.topBarHeight)
-                .padding(start = 4.dp, end = FlipLinkSpacing.rail),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.size(FlipLinkSpacing.minTouchTarget),
-            ) {
-                Icon(
-                    imageVector = FlipLinkIcons.ArrowBack,
-                    contentDescription = "Back",
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-            Text(
-                text = packageName,
-                style = typography.topBar,
-                color = colors.textPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        HorizontalDivider(
-            thickness = FlipLinkSpacing.hairline,
-            color = colors.border,
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = FlipLinkSpacing.rail, vertical = FlipLinkSpacing.rail),
-            verticalArrangement = Arrangement.spacedBy(FlipLinkSpacing.unit),
-        ) {
-            Text(
-                text = "DOMAIN VERIFICATION DETAIL",
-                style = typography.eyebrow,
-                color = colors.textMuted,
-            )
-            Text(
-                text = packageName,
-                style = typography.domain,
-                color = colors.textPrimary,
-            )
-        }
     }
 }
