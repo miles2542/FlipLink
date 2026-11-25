@@ -1,6 +1,7 @@
 package dev.miles.fliplink.ui.applist
 
 import dev.miles.fliplink.data.shizuku.ShizukuState
+import dev.miles.fliplink.domain.model.AppDrift
 
 enum class AppFilter(val label: String) {
     ALL("All"),
@@ -58,5 +59,9 @@ data class AppListUiState(
     val isReadOnly: Boolean = true,
     val shizukuState: ShizukuState = ShizukuState.NotRunning,
     val shizukuBannerDismissed: Boolean = false,
+    val drifts: List<AppDrift> = emptyList(),
+    val driftBannerSummary: String? = null,
+    val appLabelsByPackage: Map<String, String> = emptyMap(),
+    val inFlightKeys: Set<String> = emptySet(),
     val errorMessage: String? = null,
 )

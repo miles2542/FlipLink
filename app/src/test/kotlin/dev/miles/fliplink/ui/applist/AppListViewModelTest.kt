@@ -3,12 +3,14 @@ package dev.miles.fliplink.ui.applist
 import dev.miles.fliplink.data.RepositoryState
 import dev.miles.fliplink.data.pm.MergedAppLink
 import dev.miles.fliplink.data.shizuku.ShizukuState
+import dev.miles.fliplink.domain.model.AppDrift
 import dev.miles.fliplink.domain.model.AppLinkInfo
 import dev.miles.fliplink.domain.model.ApprovalLevel
 import dev.miles.fliplink.domain.model.CompetitorInfo
 import dev.miles.fliplink.domain.model.ConflictInfo
 import dev.miles.fliplink.domain.model.DomainEntry
 import dev.miles.fliplink.domain.model.DomainStatus
+import dev.miles.fliplink.domain.model.DriftItem
 import dev.miles.fliplink.domain.model.VerificationState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -125,6 +127,39 @@ class AppListViewModelTest {
         assertEquals(0, state.counts.needsAttention)
         assertEquals(0, state.counts.conflicts)
         assertEquals(0, state.counts.configured)
+    }
+
+    @Test
+    fun driftBannerSummaryShowsOnlyWhenShizukuReadyAndDriftsPresent() {
+        val drifts = listOf(
+            AppDrift(
+                packageName = "dev.miles.patched",
+                items = listOf(DriftItem.SelectionLost(setOf("alt.fliplink.example"))),
+            ),
+        )
+        val readyState = AppListViewModel.mapUiState(
+            repo = samplePrivilegedRepoState().copy(drifts = drifts),
+            shizuku = ShizukuState.Ready(version = 13, uid = 2000),
+            showSystemApps = false,
+            searchQuery = "",
+            selectedFilter = AppFilter.ALL,
+            isRefreshing = false,
+            shizukuBannerDismissed = false,
+        )
+        assertEquals("1 domain changed in 1 app", readyState.driftBannerSummary)
+        assertEquals(1, readyState.drifts.size)
+
+        val notReadyState = AppListViewModel.mapUiState(
+            repo = samplePrivilegedRepoState().copy(drifts = drifts),
+            shizuku = ShizukuState.NotRunning,
+            showSystemApps = false,
+            searchQuery = "",
+            selectedFilter = AppFilter.ALL,
+            isRefreshing = false,
+            shizukuBannerDismissed = false,
+        )
+        assertEquals(null, notReadyState.driftBannerSummary)
+        assertTrue(notReadyState.drifts.isEmpty())
     }
 
     private fun samplePrivilegedRepoState(): RepositoryState {

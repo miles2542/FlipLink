@@ -527,6 +527,27 @@ class AppLinksRepository(
         }
     }
 
+    suspend fun importSnapshot(snapshot: FlipLinkSnapshot) {
+        mutex.withLock {
+            withContext(Dispatchers.IO) { snapshotStore.save(snapshot) }
+            if (shizukuState.value.isReady && _state.value.apps.isNotEmpty()) {
+                publishMergedState(
+                    merged = _state.value.apps,
+                    snapshot = snapshot,
+                    errorMessage = null,
+                )
+            } else {
+                _state.update {
+                    it.copy(
+                        snapshot = snapshot,
+                        drifts = emptyList(),
+                        errorMessage = null,
+                    )
+                }
+            }
+        }
+    }
+
     private suspend fun executeCommandsSequentially(commands: List<PmCommand>): String? {
         for (cmd in commands) {
             val result = shellExecutor.execPm(cmd)
@@ -654,7 +675,7 @@ class AppLinksRepository(
     }
 
     companion object {
-        private const val DRIFT_ALL_FLIGHT_KEY = "drift:all"
+        const val DRIFT_ALL_FLIGHT_KEY = "drift:all"
 
         fun packageFlightKey(packageName: String): String = "pkg:$packageName"
         fun domainFlightKey(packageName: String, domain: String): String = "domain:$packageName:$domain"

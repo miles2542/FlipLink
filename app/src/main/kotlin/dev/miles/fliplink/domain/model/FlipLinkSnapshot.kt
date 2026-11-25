@@ -4,9 +4,13 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class FlipLinkSnapshot(
-    val schemaVersion: Int = 1,
+    val schemaVersion: Int = CURRENT_SCHEMA_VERSION,
     val packages: Map<String, PackageDesiredState> = emptyMap(),
-)
+) {
+    companion object {
+        const val CURRENT_SCHEMA_VERSION = 1
+    }
+}
 
 @Serializable
 data class PackageDesiredState(

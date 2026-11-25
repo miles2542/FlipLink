@@ -52,4 +52,73 @@ class SnapshotStoreTest {
 
         assertEquals(FlipLinkSnapshot(), store.load())
     }
+
+    @Test
+    fun exportAndImportJsonRoundTripsValidSnapshot() {
+        val store = SnapshotStore(tempFolder.root)
+        val snapshot = FlipLinkSnapshot(
+            schemaVersion = FlipLinkSnapshot.CURRENT_SCHEMA_VERSION,
+            packages = mapOf(
+                "dev.miles.fliplink.fixture.patched" to PackageDesiredState(
+                    linkHandlingAllowed = true,
+                    selectedDomains = setOf("test.fliplink.example", "alt.fliplink.example"),
+                    deniedDomains = emptySet(),
+                    approvedAutoVerifyDomains = emptySet(),
+                    updatedAtEpochMs = 1_700_000_100_000L,
+                ),
+            ),
+        )
+
+        val exported = store.exportJson(snapshot)
+        val imported = store.importJson(exported)
+
+        assertTrue(imported.isSuccess)
+        assertEquals(snapshot, imported.getOrThrow())
+    }
+
+    @Test
+    fun importJsonRejectsBlankAndMalformedJson() {
+        val store = SnapshotStore(tempFolder.root)
+
+        assertTrue(store.importJson("   ").isFailure)
+        assertTrue(store.importJson("{broken").isFailure)
+    }
+
+    @Test
+    fun importJsonRejectsUnsupportedSchemaVersionAndInvalidTokens() {
+        val store = SnapshotStore(tempFolder.root)
+
+        val wrongVersion = """{"schemaVersion": 2, "packages": {}}"""
+        val wrongVersionResult = store.importJson(wrongVersion)
+        assertTrue(wrongVersionResult.isFailure)
+        assertTrue(wrongVersionResult.exceptionOrNull()?.message?.contains("schema version") == true)
+
+        val badPackage = """
+            {
+              "schemaVersion": 1,
+              "packages": {
+                "bad;pkg": {
+                  "linkHandlingAllowed": true,
+                  "selectedDomains": ["example.com"],
+                  "updatedAtEpochMs": 100
+                }
+              }
+            }
+        """.trimIndent()
+        assertTrue(store.importJson(badPackage).isFailure)
+
+        val badDomain = """
+            {
+              "schemaVersion": 1,
+              "packages": {
+                "com.example.app": {
+                  "linkHandlingAllowed": true,
+                  "selectedDomains": ["--bad"],
+                  "updatedAtEpochMs": 100
+                }
+              }
+            }
+        """.trimIndent()
+        assertTrue(store.importJson(badDomain).isFailure)
+    }
 }

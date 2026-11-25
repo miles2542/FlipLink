@@ -41,6 +41,8 @@ fun SettingsSheet(
     onThemeModeChange: (ThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
     onShowSystemAppsChange: (Boolean) -> Unit,
+    onExportConfig: () -> Unit,
+    onImportConfig: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = FlipLinkTheme.colors
@@ -118,7 +120,76 @@ fun SettingsSheet(
                 checked = showSystemApps,
                 onCheckedChange = onShowSystemAppsChange,
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "BACKUP",
+                style = typography.eyebrow,
+                color = colors.textMuted,
+                modifier = Modifier.padding(horizontal = FlipLinkSpacing.rail, vertical = 4.dp),
+            )
+
+            SettingsActionRow(
+                title = "Export config",
+                subtitle = "Save link preferences as JSON",
+                onClick = onExportConfig,
+            )
+
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = FlipLinkSpacing.rail),
+                thickness = FlipLinkSpacing.hairline,
+                color = colors.border,
+            )
+
+            SettingsActionRow(
+                title = "Import config",
+                subtitle = "Restore preferences and review changes",
+                onClick = onImportConfig,
+            )
         }
+    }
+}
+
+@Composable
+private fun SettingsActionRow(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+) {
+    val colors = FlipLinkTheme.colors
+    val typography = FlipLinkTheme.typography
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 60.dp)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = FlipLinkSpacing.rail, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = title,
+                style = typography.appLabel,
+                color = colors.textPrimary,
+            )
+            Text(
+                text = subtitle,
+                style = typography.secondary,
+                color = colors.textSecondary,
+            )
+        }
+        Icon(
+            imageVector = FlipLinkIcons.ChevronRight,
+            contentDescription = null,
+            tint = colors.textMuted,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 
