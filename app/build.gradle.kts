@@ -38,6 +38,19 @@ android {
 
     buildFeatures {
         compose = true
+        aidl = true
+    }
+}
+
+// aidl.exe embeds -d<TEMP> paths in a /* Using: ... */ comment, which breaks javac if TEMP contains \u
+tasks.withType<com.android.build.gradle.tasks.AidlCompile>().configureEach {
+    doLast {
+        sourceOutputDir.asFileTree.matching { include("**/*.java") }.forEach { file ->
+            val text = file.readText()
+            if (text.contains("\\u")) {
+                file.writeText(text.replace("\\u", "/u"))
+            }
+        }
     }
 }
 

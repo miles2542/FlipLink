@@ -19,6 +19,9 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -26,6 +29,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import dev.miles.fliplink.data.shizuku.ShizukuState
 import dev.miles.fliplink.ui.theme.FlipLinkSpacing
 import dev.miles.fliplink.ui.theme.FlipLinkTheme
 import kotlinx.serialization.Serializable
@@ -43,8 +47,22 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val container = (application as FlipLinkApplication).container
         setContent {
-            FlipLinkTheme {
+            val themeMode by container.preferencesStore.themeMode.collectAsState()
+            val dynamicColor by container.preferencesStore.dynamicColor.collectAsState()
+            val shizukuState by container.shizukuBridge.state.collectAsState()
+
+            LaunchedEffect(shizukuState) {
+                if (shizukuState !is ShizukuState.Binding) {
+                    container.repository.refresh()
+                }
+            }
+
+            FlipLinkTheme(
+                themeMode = themeMode,
+                dynamicColor = dynamicColor,
+            ) {
                 FlipLinkNavHost()
             }
         }
