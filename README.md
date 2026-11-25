@@ -6,6 +6,19 @@ Built as a flat, high-density system instrument: no background services, no root
 
 ---
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="https://github.com/user-attachments/assets/d69c0dc4-d31f-4e10-94cb-6bd957c8cdb0" width="220" alt="App List (Light)" /><br /><sub>App List (Light)</sub></td>
+    <td align="center"><img src="https://github.com/user-attachments/assets/68301b7c-4ae9-4a48-b3fb-9f1dce141ed5" width="220" alt="App List (Dark)" /><br /><sub>App List (Dark)</sub></td>
+    <td align="center"><img src="https://github.com/user-attachments/assets/57efaf3a-b5bd-4555-a80b-7da01b626c01" width="220" alt="Conflict Takeover" /><br /><sub>Conflict Takeover</sub></td>
+    <td align="center"><img src="https://github.com/user-attachments/assets/e383793d-5d48-4d2c-ac84-3621a6bf4245" width="220" alt="Drift Review" /><br /><sub>Drift Review</sub></td>
+  </tr>
+</table>
+
+---
+
 ## Why FlipLink
 
 On several Android 12+ OEM ROMs, the system **Open by default** screen only exposes the master *Open supported links in this app* switch while hiding the per-domain host list. FlipLink brings that control back and handles two real-world edge cases:
