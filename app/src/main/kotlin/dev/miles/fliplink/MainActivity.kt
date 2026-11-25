@@ -58,10 +58,12 @@ sealed interface FlipLinkRoute {
 }
 
 class MainActivity : ComponentActivity() {
+    private lateinit var container: AppContainer
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val container = (application as FlipLinkApplication).container
+        container = (application as FlipLinkApplication).container
         setContent {
             val themeMode by container.preferencesStore.themeMode.collectAsState()
             val dynamicColor by container.preferencesStore.dynamicColor.collectAsState()
@@ -92,6 +94,18 @@ class MainActivity : ComponentActivity() {
                 FlipLinkNavHost(container = container)
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        container.shizukuBridge.onForeground()
+    }
+
+    override fun onStop() {
+        if (!isChangingConfigurations) {
+            container.shizukuBridge.onBackground()
+        }
+        super.onStop()
     }
 }
 

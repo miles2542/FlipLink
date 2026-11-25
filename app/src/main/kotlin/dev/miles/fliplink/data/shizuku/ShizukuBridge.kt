@@ -29,6 +29,9 @@ class ShizukuBridge(
     @Volatile
     private var lastError: String? = null
 
+    @Volatile
+    private var isForeground: Boolean = false
+
     private val userServiceArgs: Shizuku.UserServiceArgs by lazy {
         val isDebuggable = (appContext.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         Shizuku.UserServiceArgs(ComponentName(appContext, ShellUserService::class.java))
@@ -38,10 +41,21 @@ class ShizukuBridge(
             .version(USER_SERVICE_VERSION)
     }
 
-    private val serviceConnection = object : ServiceConnection {
+    private val serviceConnection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             synchronized(lock) {
                 isBinding = false
+                if (!isForeground) {
+                    shellService = null
+                    try {
+                        if (Shizuku.pingBinder()) {
+                            Shizuku.unbindUserService(userServiceArgs, serviceConnection, true)
+                        }
+                    } catch (_: Throwable) {
+                        // Ignore unbind errors when already backgrounded
+                    }
+                    return
+                }
                 if (binder == null || !binder.pingBinder()) {
                     shellService = null
                     lastError = "Received null or dead Shizuku UserService binder"
@@ -116,6 +130,24 @@ class ShizukuBridge(
 
     fun currentService(): IShellService? = shellService
 
+    fun onForeground() {
+        synchronized(lock) {
+            isForeground = true
+            lastError = null
+            updateStateLocked()
+        }
+    }
+
+    fun onBackground() {
+        synchronized(lock) {
+            isForeground = false
+            unbindServiceLocked()
+            if (_state.value is ShizukuState.Ready) {
+                _state.value = ShizukuState.Binding
+            }
+        }
+    }
+
     fun recheck() {
         synchronized(lock) {
             lastError = null
@@ -154,15 +186,28 @@ class ShizukuBridge(
         Shizuku.removeBinderDeadListener(binderDeadListener)
         Shizuku.removeRequestPermissionResultListener(permissionResultListener)
         synchronized(lock) {
-            isBinding = false
-            shellService = null
-            try {
-                if (Shizuku.pingBinder()) {
-                    Shizuku.unbindUserService(userServiceArgs, serviceConnection, true)
-                }
-            } catch (_: Throwable) {
-                // Ignore unbind errors during teardown
+            isForeground = false
+            unbindServiceLocked()
+        }
+    }
+
+    private fun unbindServiceLocked() {
+        val service = shellService
+        val wasActive = isBinding || service != null
+        isBinding = false
+        shellService = null
+        if (!wasActive) return
+        try {
+            service?.destroy()
+        } catch (_: Throwable) {
+            // Remote process exits inside destroy()
+        }
+        try {
+            if (Shizuku.pingBinder()) {
+                Shizuku.unbindUserService(userServiceArgs, serviceConnection, true)
             }
+        } catch (_: Throwable) {
+            // Ignore unbind errors during teardown
         }
     }
 
@@ -218,7 +263,7 @@ class ShizukuBridge(
         }
 
         _state.value = ShizukuState.Binding
-        if (!isBinding) {
+        if (isForeground && !isBinding) {
             isBinding = true
             try {
                 Shizuku.bindUserService(userServiceArgs, serviceConnection)
