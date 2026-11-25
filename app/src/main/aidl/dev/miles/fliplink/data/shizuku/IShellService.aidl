@@ -3,6 +3,6 @@ package dev.miles.fliplink.data.shizuku;
 import dev.miles.fliplink.data.shizuku.ShellResult;
 
 interface IShellService {
-    ShellResult execPm(in String[] args);
-    void destroy();
+    void destroy() = 16777114;
+    ShellResult execPm(in String[] args) = 1;
 }

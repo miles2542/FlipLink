@@ -1,9 +1,14 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
+
+val signingPropertiesFile = rootProject.file("signing.properties")
+val hasReleaseSigning = signingPropertiesFile.exists()
 
 android {
     namespace = "dev.miles.fliplink"
@@ -17,9 +22,29 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                val props = Properties().apply {
+                    signingPropertiesFile.inputStream().use { load(it) }
+                }
+                storeFile = rootProject.file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
