@@ -61,6 +61,8 @@ fun AppListScreen(
     onDismissShizukuBanner: () -> Unit,
     onOpenShizukuSheet: () -> Unit,
     onOpenSettingsSheet: () -> Unit,
+    onOpenDriftReviewSheet: () -> Unit,
+    onReapplyAllDrift: () -> Unit,
     onAppClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -100,6 +102,18 @@ fun AppListScreen(
             onOpenSheet = onOpenShizukuSheet,
             onDismiss = onDismissShizukuBanner,
         )
+
+        if (uiState.driftBannerSummary != null) {
+            CompactBanner(
+                message = uiState.driftBannerSummary,
+                tone = BannerTone.Warning,
+                secondaryActionLabel = "Review",
+                onSecondaryAction = onOpenDriftReviewSheet,
+                actionLabel = "Re-apply",
+                onAction = onReapplyAllDrift,
+                modifier = Modifier.padding(horizontal = FlipLinkSpacing.rail, vertical = 4.dp),
+            )
+        }
 
         if (uiState.errorMessage != null) {
             CompactBanner(

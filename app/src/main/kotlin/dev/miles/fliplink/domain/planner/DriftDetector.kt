@@ -83,7 +83,14 @@ object DriftDetector {
     }
 
     fun buildReapplyPlan(drifts: List<AppDrift>): List<PmCommand> {
-        return drifts.flatMap { it.reapplyCommands }
+        val (demotions, promotions) = drifts.flatMap { it.reapplyCommands }.partition { cmd ->
+            when (cmd.subcommand) {
+                "set-app-links" -> cmd.args.getOrNull(2) == VerificationState.PM_STATE_DENIED.toString()
+                "set-app-links-user-selection" -> cmd.args.getOrNull(4) == "false"
+                else -> false
+            }
+        }
+        return demotions + promotions
     }
 
     private fun buildReapplyCommands(

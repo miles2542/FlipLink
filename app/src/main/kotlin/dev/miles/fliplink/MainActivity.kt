@@ -4,25 +4,19 @@ import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -30,10 +24,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -44,9 +39,13 @@ import dev.miles.fliplink.ui.appdetail.AppDetailScreen
 import dev.miles.fliplink.ui.appdetail.AppDetailViewModel
 import dev.miles.fliplink.ui.applist.AppListScreen
 import dev.miles.fliplink.ui.applist.AppListViewModel
+import dev.miles.fliplink.ui.sheets.DriftReviewSheet
 import dev.miles.fliplink.ui.sheets.SettingsSheet
 import dev.miles.fliplink.ui.sheets.ShizukuStatusSheet
 import dev.miles.fliplink.ui.theme.FlipLinkTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -100,6 +99,9 @@ class MainActivity : ComponentActivity() {
 private fun FlipLinkNavHost(container: AppContainer) {
     val navController = rememberNavController()
     val colors = FlipLinkTheme.colors
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val themeMode by container.preferencesStore.themeMode.collectAsState()
     val dynamicColor by container.preferencesStore.dynamicColor.collectAsState()
@@ -108,6 +110,60 @@ private fun FlipLinkNavHost(container: AppContainer) {
 
     var showShizukuSheet by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
+    var showDriftReviewSheet by remember { mutableStateOf(false) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        coroutineScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val json = container.snapshotStore.exportJson(container.repository.state.value.snapshot)
+                    context.contentResolver.openOutputStream(uri)?.use { stream ->
+                        stream.write(json.toByteArray(Charsets.UTF_8))
+                    } ?: error("Unable to open output file")
+                }
+            }
+            if (result.isSuccess) {
+                snackbarHostState.showSnackbar("Config exported")
+            } else {
+                snackbarHostState.showSnackbar(result.exceptionOrNull()?.message ?: "Export failed")
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        coroutineScope.launch {
+            val readResult = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        stream.bufferedReader(Charsets.UTF_8).readText()
+                    } ?: error("Unable to read selected file")
+                }
+            }
+            val rawJson = readResult.getOrElse { error ->
+                snackbarHostState.showSnackbar(error.message ?: "Import failed")
+                return@launch
+            }
+            val parsed = container.snapshotStore.importJson(rawJson).getOrElse { error ->
+                snackbarHostState.showSnackbar(error.message ?: "Invalid config file")
+                return@launch
+            }
+            container.repository.importSnapshot(parsed)
+            showSettingsSheet = false
+            val currentDrifts = container.repository.state.value.drifts
+            if (shizukuState.isReady && currentDrifts.isNotEmpty()) {
+                showDriftReviewSheet = true
+            } else {
+                val appNoun = if (parsed.packages.size == 1) "app" else "apps"
+                snackbarHostState.showSnackbar("Config imported (${parsed.packages.size} $appNoun)")
+            }
+        }
+    }
 
     val appListViewModel = remember(container) {
         AppListViewModel(
@@ -145,6 +201,19 @@ private fun FlipLinkNavHost(container: AppContainer) {
                     onDismissShizukuBanner = appListViewModel::onDismissShizukuBanner,
                     onOpenShizukuSheet = { showShizukuSheet = true },
                     onOpenSettingsSheet = { showSettingsSheet = true },
+                    onOpenDriftReviewSheet = { showDriftReviewSheet = true },
+                    onReapplyAllDrift = {
+                        coroutineScope.launch {
+                            val result = container.repository.reapplyDrift(null)
+                            if (result.isSuccess) {
+                                snackbarHostState.showSnackbar("Saved configuration re-applied")
+                            } else {
+                                snackbarHostState.showSnackbar(
+                                    result.exceptionOrNull()?.message ?: "Failed to re-apply changes",
+                                )
+                            }
+                        }
+                    },
                     onAppClick = { packageName ->
                         navController.navigate(FlipLinkRoute.AppDetail(packageName))
                     },
@@ -186,6 +255,13 @@ private fun FlipLinkNavHost(container: AppContainer) {
                 )
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 12.dp),
+        )
     }
 
     if (showShizukuSheet) {
@@ -205,7 +281,55 @@ private fun FlipLinkNavHost(container: AppContainer) {
             onThemeModeChange = container.preferencesStore::setThemeMode,
             onDynamicColorChange = container.preferencesStore::setDynamicColor,
             onShowSystemAppsChange = container.preferencesStore::setShowSystemApps,
+            onExportConfig = { exportLauncher.launch("fliplink-config.json") },
+            onImportConfig = {
+                importLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+            },
             onDismiss = { showSettingsSheet = false },
+        )
+    }
+
+    if (showDriftReviewSheet) {
+        DriftReviewSheet(
+            drifts = appListUiState.drifts,
+            appLabels = appListUiState.appLabelsByPackage,
+            iconCache = container.appIconCache,
+            inFlightKeys = appListUiState.inFlightKeys,
+            onReapplyPackage = { pkg ->
+                coroutineScope.launch {
+                    val result = container.repository.reapplyDrift(pkg)
+                    if (result.isFailure) {
+                        snackbarHostState.showSnackbar(
+                            result.exceptionOrNull()?.message ?: "Failed to re-apply $pkg",
+                        )
+                    }
+                }
+            },
+            onAcceptPackage = { pkg ->
+                coroutineScope.launch {
+                    container.repository.acceptDrift(pkg)
+                }
+            },
+            onReapplyAll = {
+                coroutineScope.launch {
+                    val result = container.repository.reapplyDrift(null)
+                    if (result.isSuccess) {
+                        showDriftReviewSheet = false
+                        snackbarHostState.showSnackbar("All changes re-applied")
+                    } else {
+                        snackbarHostState.showSnackbar(
+                            result.exceptionOrNull()?.message ?: "Failed to re-apply changes",
+                        )
+                    }
+                }
+            },
+            onAcceptAll = {
+                coroutineScope.launch {
+                    container.repository.acceptDrift(null)
+                    showDriftReviewSheet = false
+                }
+            },
+            onDismiss = { showDriftReviewSheet = false },
         )
     }
 }

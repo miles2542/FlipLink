@@ -6,6 +6,7 @@ import dev.miles.fliplink.data.shizuku.ShizukuState
 import dev.miles.fliplink.domain.model.ApprovalLevel
 import dev.miles.fliplink.domain.model.ConflictInfo
 import dev.miles.fliplink.domain.model.DomainStatus
+import dev.miles.fliplink.ui.sheets.formatDriftBannerSummary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -154,6 +155,10 @@ class AppListViewModel(
                 AppFilter.CONFIGURED -> mappedModels.filter { it.isConfigured }
             }.sortedWith(itemComparator(repo.isReadOnly))
 
+            val visibleDrifts = if (shizuku.isReady) repo.drifts else emptyList()
+            val driftBannerSummary = formatDriftBannerSummary(visibleDrifts)
+            val appLabels = repo.apps.associate { it.packageName to it.displayLabel }
+
             return AppListUiState(
                 items = filteredItems,
                 counts = counts,
@@ -165,6 +170,10 @@ class AppListViewModel(
                 isReadOnly = repo.isReadOnly,
                 shizukuState = shizuku,
                 shizukuBannerDismissed = shizukuBannerDismissed,
+                drifts = visibleDrifts,
+                driftBannerSummary = driftBannerSummary,
+                appLabelsByPackage = appLabels,
+                inFlightKeys = repo.inFlightKeys,
                 errorMessage = repo.errorMessage,
             )
         }

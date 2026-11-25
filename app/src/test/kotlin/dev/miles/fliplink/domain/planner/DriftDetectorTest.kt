@@ -156,4 +156,56 @@ class DriftDetectorTest {
         val decoded = Json.decodeFromString<FlipLinkSnapshot>(encoded)
         assertEquals(snapshot, decoded)
     }
+
+    @Test
+    fun buildReapplyPlan_orders_competitor_demotions_before_promotions_regardless_of_package_sort() {
+        val desired = FlipLinkSnapshot(
+            schemaVersion = 1,
+            packages = mapOf(
+                "com.example.alpha" to PackageDesiredState(
+                    linkHandlingAllowed = true,
+                    selectedDomains = setOf("test.fliplink.example"),
+                    updatedAtEpochMs = 1000L,
+                ),
+                "com.example.zeta" to PackageDesiredState(
+                    linkHandlingAllowed = true,
+                    deniedDomains = setOf("test.fliplink.example"),
+                    updatedAtEpochMs = 1000L,
+                ),
+            ),
+        )
+        val live = mapOf(
+            "com.example.alpha" to AppLinkInfo(
+                packageName = "com.example.alpha",
+                linkHandlingAllowed = true,
+                hasAutoVerifyBlock = false,
+                domains = listOf(
+                    entry("test.fliplink.example", isAutoVerify = false, state = VerificationState.None, userSelected = false),
+                ),
+            ),
+            "com.example.zeta" to AppLinkInfo(
+                packageName = "com.example.zeta",
+                linkHandlingAllowed = true,
+                hasAutoVerifyBlock = true,
+                domains = listOf(
+                    entry("test.fliplink.example", isAutoVerify = true, state = VerificationState.Verified, userSelected = false),
+                ),
+            ),
+        )
+
+        val drifts = DriftDetector.computeDrift(desired, live)
+        val reapplyLines = AdbCommandBuilder.formatCommands(
+            DriftDetector.buildReapplyPlan(drifts),
+            includeAdbPrefix = false,
+        ).lines()
+
+        assertEquals(
+            listOf(
+                "pm set-app-links --package com.example.zeta 3 test.fliplink.example",
+                "pm set-app-links-user-selection --user 0 --package com.example.zeta false test.fliplink.example",
+                "pm set-app-links-user-selection --user 0 --package com.example.alpha true test.fliplink.example",
+            ),
+            reapplyLines,
+        )
+    }
 }

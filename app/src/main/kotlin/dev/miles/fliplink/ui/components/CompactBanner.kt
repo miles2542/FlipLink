@@ -36,6 +36,8 @@ fun CompactBanner(
     modifier: Modifier = Modifier,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
+    secondaryActionLabel: String? = null,
+    onSecondaryAction: (() -> Unit)? = null,
     onDismiss: (() -> Unit)? = null,
 ) {
     val colors = FlipLinkTheme.colors
@@ -85,6 +87,24 @@ fun CompactBanner(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
+        if (secondaryActionLabel != null && onSecondaryAction != null) {
+            Box(
+                modifier = Modifier
+                    .defaultMinSize(minHeight = 32.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable(role = Role.Button, onClick = onSecondaryAction)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = secondaryActionLabel,
+                    style = typography.inlineAction,
+                    color = contentColor,
+                    maxLines = 1,
+                    softWrap = false,
+                )
+            }
+        }
         if (actionLabel != null && onAction != null) {
             Box(
                 modifier = Modifier
