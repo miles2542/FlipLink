@@ -2,6 +2,7 @@ package dev.miles.fliplink
 
 import android.content.Context
 import dev.miles.fliplink.data.AppLinksRepository
+import dev.miles.fliplink.data.pm.AppIconCache
 import dev.miles.fliplink.data.pm.PackageDiscovery
 import dev.miles.fliplink.data.shizuku.ShellExecutor
 import dev.miles.fliplink.data.shizuku.ShizukuBridge
@@ -22,6 +23,10 @@ class AppContainer(context: Context) {
 
     val packageDiscovery: PackageDiscovery by lazy {
         PackageDiscovery(applicationContext)
+    }
+
+    val appIconCache: AppIconCache by lazy {
+        AppIconCache(applicationContext)
     }
 
     val snapshotStore: SnapshotStore by lazy {
