@@ -1,8 +1,18 @@
-# FlipLink
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/icon-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset=".github/assets/icon-light.svg" />
+    <img src=".github/assets/icon-light.svg" width="88" height="88" alt="FlipLink app icon" />
+  </picture>
+</p>
 
-Android utility (`dev.miles.fliplink`) that restores per-domain **Open by default** link control on Android 12+ OEM ROMs (such as Honor MagicOS) where system settings hide per-domain toggles and leave web links disabled by default.
+<h1 align="center">FlipLink</h1>
 
-Built as a flat, high-density system instrument: no background services, no root (`su`), and no Share-sheet or browser-interception workarounds—just direct control over Android's native `pm` domain-verification layer.
+<p align="center">
+  Restore per-domain <strong>Open by default</strong> link control on Android 12+ OEM ROMs.
+</p>
+
+Android utility (`dev.miles.fliplink`) for OEM ROMs (such as Honor MagicOS) where system settings hide per-domain toggles and leave web links disabled by default. Built as a flat, high-density system instrument: no background services, no root (`su`), and no Share-sheet or browser-interception workarounds—just direct control over Android's native `pm` domain-verification layer.
 
 ---
 
@@ -95,4 +105,4 @@ Requires **JDK 21** and Android SDK (`compileSdk = 36`, `build-tools;36.0.0`).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Apache-2.0 — see [LICENSE](LICENSE).
